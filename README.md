@@ -6,8 +6,11 @@ This utility is used to interact with a sqlite database.
 With this utilty (module), the following actions is available:
 
 - added 08/12/2017
-    - Use a csv file to create a table
-    - Use a csv file to add data to a table
+    - Use a CSV file to create a table
+    - Use a CSV file to add data to a table
+    - Export a SQLite table to a CSV
+    - Export multiple tables to a CSV
+    - Raise errors if there is an unexpected data type
     
 This file will be updated with new functions when are created
 
