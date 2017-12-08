@@ -11,6 +11,10 @@ import sqlite3
 #NOTE: I come from C++ so if I say array I mean a list and a throw as an error
 #raise, sorry if I say it wrong
 
+#To get the valuetype of the row the program needs to execute pragma table_info(table)
+#and fetch the data, the actual datatype will be displayed as the 2nd value
+#of the tuple returned
+
 #convert a CSV file to a compatible sqlite DB
 def csvToDb(source,dest):   
     
@@ -31,7 +35,7 @@ def csvToDb(source,dest):
         ptFile = open(source,"r")
     
     except FileNotFoundError:
-        raise FileNotFoundError(source + "not found! check file name")
+        raise FileNotFoundError(source + " not found! check file name")
     
     #fetch the name of the table to create and truncate the commas
     tabName = ptFile.readline()
@@ -46,16 +50,25 @@ def csvToDb(source,dest):
     #create an array which contains all the occourences
     headNames = []
     
+    #create an array which contains the datatypes
+    dataTypes = []
+    
     #cycle which extract each name
     for x in range(0,elem):
-        #find the position of next comma
-        nextOcc = headers.find(",")
+        #find the position of the next comma
+        nextOccName = headers.find("|")
+        
+        #find the position of the next column
+        nextOccType = headers.find(",")
         
         #append the string from the start until the next occourences of the comma
-        headNames.append(headers[0:nextOcc])
+        headNames.append(headers[0:nextOccName])
+        
+        #append the string from the column to the end
+        dataTypes.append(headers[nextOccName+1:nextOccType])
         
         #truncate the string after the comma
-        headers = headers[nextOcc+1:]
+        headers = headers[nextOccType+1:]
         
         #NOTE: I DIDN'T NEED TO MODIFY THE CODE FOR THE LAST ELEMENT SINCE
         #IF THE NEXT "FIND" RETURNS -1, WHICH MEANS "NOT FOUND", THE APPEND
@@ -70,12 +83,17 @@ def csvToDb(source,dest):
     #if does not exists, creates it
     #NOTE: DATA WILL BE SAVED AS TEXT, NOT INT OR OTHER FORMAT
     except:    
+        
         #create the base statement
         statement = "CREATE TABLE " + tabName + " ("
         
+        #create a temporary index
+        index = 0
+        
         #for each name in the headNames array, update the statement
         for name in headNames:
-            statement = statement + name + " text(10),"
+            statement = statement + name + " " + dataTypes[index] + ","
+            index = index + 1
             
         #remove the last comma inserted because we don't need it and close
         #the statement
@@ -142,6 +160,12 @@ def csvToDb(source,dest):
 #export one or all database to a single CSV file
 def dbToCsv(source,dest,table):
     
+    def fetchDataType(tabName,index):
+        database = sqlite3.connect(source)
+        cursor = database.execute("pragma table_info("+tabName+")")
+        datas = cursor.fetchall()
+        return datas[index][2]
+    
     #function which returns data from the database as a string
     def fetchData(tabName):
         
@@ -163,9 +187,12 @@ def dbToCsv(source,dest,table):
                 #add the name of the table 
                 toCsv = tabName+(","*cursor.description.__len__())+"\n"
                 
+                index = 0
+                
                 #add the name of the columns
                 for desc in cursor.description:
-                    toCsv = toCsv + desc[0] + ","
+                    toCsv = toCsv + desc[0] + "|" + fetchDataType(tabName,index) + ","
+                    index = index + 1
                 toCsv = toCsv[:-1]+"\n"
                             
             else:
@@ -178,9 +205,12 @@ def dbToCsv(source,dest,table):
                 #then, write the string just created to the file
                 toCsv = toCsv + head + "\n"
                 
+                index = 0
+                
                 #add the name of the columns
                 for desc in cursor.description:
-                    toCsv = toCsv + desc[0] + ","
+                    toCsv = toCsv + desc[0] + "|" + fetchDataType(tabName,index) + ","
+                    index = index + 1
                 toCsv = toCsv[:-1]+"\n"
                                                 
                 #cycle to all tuple in the array fetched
@@ -214,7 +244,7 @@ def dbToCsv(source,dest,table):
         open(source,"r")
     
     except:
-        raise FileNotFoundError(source, "not found! Check file name")
+        raise FileNotFoundError(source + " not found! Check file name")
         
     #connect to the database and create the destination file    
     database = sqlite3.connect(source)

@@ -2,3 +2,4 @@
 .DS_Store
 *.db
 *.csv
+__pycache__/dbTools.cpython-36.pyc
