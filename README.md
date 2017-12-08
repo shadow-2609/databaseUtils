@@ -10,7 +10,7 @@ With this utilty (module), the following actions is available:
     - Use a CSV file to add data to a table
     - Export SQLite table to a CSV
     
--Features of this module
+- Features of this module
     - Raise errors if there is an unexpected data type
     - Can create or add data to a given database
     - Multiple databases can be exported to the CSV file
