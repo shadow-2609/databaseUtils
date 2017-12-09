@@ -160,74 +160,66 @@ def csvToDb(source,dest):
 #export one or all database to a single CSV file
 def dbToCsv(source,dest,table):
     
-    def fetchDataType(tabName,index):
-        database = sqlite3.connect(source)
-        cursor = database.execute("pragma table_info("+tabName+")")
-        datas = cursor.fetchall()
-        return datas[index][2]
-    
     #function which returns data from the database as a string
     def fetchData(tabName):
         
         #if an element in the table list is not a string, raise a TypeError
-            if type(tabName) is not str:
-                raise TypeError("One or more element in the list is/are not a string!")
+        if type(tabName) is not str:
+            raise TypeError("One or more element in the list is/are not a string!")
+    
+        #create a variable to return some data
+        toCsv = ""
         
-            #create a variable to return some data
-            toCsv = ""
+        #check how many columns the database has, to do that the program
+        #firstly fetch everything from the table to export...
+        cursor = database.execute("select * from " + tabName)
+        data = cursor.fetchall()
+        
+        #check if there is actual data in the table
+        if data.__len__() is 0:
             
-            #check how many columns the database has, to do that the program
-            #firstly fetch everything from the table to export...
-            cursor = database.execute("select * from " + tabName)
-            data = cursor.fetchall()
+            #add the name of the table 
+            toCsv = tabName+(","*cursor.description.__len__())+"\n"
             
-            #check if there is actual data in the table
-            if data.__len__() is 0:
-                
-                #add the name of the table 
-                toCsv = tabName+(","*cursor.description.__len__())+"\n"
-                
-                index = 0
-                
-                #add the name of the columns
-                for desc in cursor.description:
-                    toCsv = toCsv + desc[0] + "|" + fetchDataType(tabName,index) + ","
-                    index = index + 1
-                toCsv = toCsv[:-1]+"\n"
-                            
-            else:
-                #...then check the lenght of the first tuple returned
-                columns = data[0].__len__()
-                
-                #write the name of the table and add as much comma as needed
-                head = tabName + (","*columns)
-                
-                #then, write the string just created to the file
-                toCsv = toCsv + head + "\n"
-                
-                index = 0
-                
-                #add the name of the columns
-                for desc in cursor.description:
-                    toCsv = toCsv + desc[0] + "|" + fetchDataType(tabName,index) + ","
-                    index = index + 1
-                toCsv = toCsv[:-1]+"\n"
-                                                
-                #cycle to all tuple in the array fetched
-                for tupleData in data:
-                    
-                    #also cycle all the args in the tuple
-                    for actualData in tupleData:
+            index = 0
+            
+            #add the name of the columns
+            for desc in cursor.description:
+                toCsv = toCsv + desc[0] + "|" + fetchDataType(source,tabName,index) + ","
+                index = index + 1
+            toCsv = toCsv[:-1]+"\n"
                         
-                        #update the toCsv variable
-                        toCsv = toCsv + actualData + ","
-                
-                    #remove the last comma added and add a new line
-                    toCsv = toCsv[:-1] + "\n"
+        else:
+            #...then check the lenght of the first tuple returned
+            columns = data[0].__len__()
             
-            return toCsv
+            #write the name of the table and add as much comma as needed
+            head = tabName + (","*columns)
+            
+            #then, write the string just created to the file
+            toCsv = toCsv + head + "\n"
+            
+            index = 0
+            
+            #add the name of the columns
+            for desc in cursor.description:
+                toCsv = toCsv + desc[0] + "|" + fetchDataType(source,tabName,index) + ","
+                index = index + 1
+            toCsv = toCsv[:-1]+"\n"
+                                            
+            #cycle to all tuple in the array fetched
+            for tupleData in data:
+                
+                #also cycle all the args in the tuple
+                for actualData in tupleData:
+                    
+                    #update the toCsv variable
+                    toCsv = toCsv + actualData + ","
+            
+                #remove the last comma added and add a new line
+                toCsv = toCsv[:-1] + "\n"
         
-        
+        return toCsv
         
     #if source is not a sting
     if type(source) is not str:
@@ -279,6 +271,137 @@ def dbToCsv(source,dest,table):
     #if table is not a string or a list, throw a TypeError to notify the user    
     else:
         raise TypeError("table is not a string nor a list. Provide one of this type of data")
+
+
+
+#function to fecth the type of data of a row  by index definiton
+def fetchDataTypeByIndex(source,tabName,index):
     
+    #open the database indicated by the source and get a cursor
+    #NOTE: PRAGMA IS AN INTERNAL SQLITE3 FUNCTION
+    database = sqlite3.connect(source)
+    cursor = database.execute("pragma table_info("+tabName+")")
+    
+    #fetch all the data from the cursor
+    data = cursor.fetchall()
+    
+    #return just the third element of the indicated index
+    #NOTE: THIS RETURN JUST THE THIRD INDEX OF THE SELECTED ELEMENT, WHICH
+    #RAPRESENT THE DATA TYPE
+    #THE STRUCTURE WORKS LIKE THIS: 0 -> INDEX, 1 -> NAME, 2 -> DATATYPES
+    return data[index][2]
+
+
+
+#function to fecth the type of data of a row 
+def fetchDataType(source,tabName):
+    
+    #open the database indicated by the source and get a cursor
+    database = sqlite3.connect(source)
+    cursor = database.execute("pragma table_info("+tabName+")")
+    
+    #fetch all the data
+    data = cursor.fetchall()
+    
+    #create a temporary array
+    rowType = []
+    
+    #loop for each element in the data array
+    for name in data:
+        
+        #append just the 3rd index of that element, which rapresent the data type
+        rowType.append(name[2])
+        
+    #return the array
+    return rowType
+
+
+
+
+#function to fetch columns names by index definition
+def fetchColumnNameByIndex(source,tabName,index):
+    
+    #open the database indicated by the source and get a cursor 
+    database = sqlite3.connect(source)
+    cursor = database.execute("pragma table_info("+tabName+")")
+    
+    #fetch all the data from the cursor
+    datas = cursor.fetchall()
+    
+    #return just the third element of the indicated index
+    return datas[index][1]
+
+
+#function to fetch columns names
+def fetchColumnName(source,tabName):
+    
+    #open the database indicated by the source and get a cursor 
+    database = sqlite3.connect(source)
+    cursor = database.execute("pragma table_info("+tabName+")")
+    
+    #fetch all the data from the cursor
+    data = cursor.fetchall()
+    
+    #create a temporary array  
+    rowNames = []
+    
+    #loop for each element in the data array
+    for name in data:
+        
+        #append just the 2nd index of that element, which rapresent the data type
+        rowNames.append(name[1])
+        
+    #return the array
+    return rowNames
+
+#function to fetch tables names
+def fetchTablesNames(source):
+    
+    #open the database indicated by the source and get a cursor 
+    database = sqlite3.connect(source)
+    cursor = database.execute("select name from sqlite_master")
+    
+    #fetch all the data from the cursor
+    data = cursor.fetchall()
+    
+    #create a temporary array      
+    tabNames = []
+    
+    #loop for each element in the data array
+    for name in data:
+        
+        #append just the 1st index of that element
+        #NOTE: WE HAVE TO GET JUST THE FIRST ELEMENT SINCE THE NAME VARIABLE
+        #FROM THE DATA ARRAY IS AN ARRAY ITSELF
+        tabNames.append(name[0])
+    
+    #return the array
+    return tabNames   
 
     
+#function to fetch description of a given table
+def fetchInfo(source):
+    
+    #check if source is a string throw an exception
+    if type(source) is not str:
+        raise TypeError("source is not a string!!!")
+        
+    #fetch tables names
+    names = fetchTablesNames(source)
+    
+    #create a variable to store ids and data type for each table
+    tables = []
+    
+    #for each table create other 2 arrays and fill it with ids and data types
+    for name in names:
+        
+        #create an array which contains the name, the array returned from the
+        #fetchColumnName function an the array returned from the fetchDataType
+        #function
+        tempTables = [name,fetchColumnName(source,name),fetchDataType(source,name)]
+        
+        #append the just created array
+        tables.append(tempTables)
+        
+    #return the array   
+    return tables
