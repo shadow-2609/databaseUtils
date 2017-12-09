@@ -15,6 +15,7 @@ With this utilty (module), the following actions is available:
     - Can create or add data to a given database
     - Multiple databases can be exported to the CSV file
     - Each data has a datatype assigned to their respective column
+    - Can export all database using *all* as 3rd argument with the dbToCsv function
 
 This file will be updated with new functions when are created
 
