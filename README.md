@@ -22,7 +22,7 @@ This file will be updated with new functions when are created
 # Functions / Features to implement
 
 - added 08/12/2017
-    -check the type of each data
+    - check the type of each data
 
 
 Submit your code changes to improve this module!
