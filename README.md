@@ -20,15 +20,18 @@ With this utility (module), the following actions is available:
     - Fetch database info (returned as a list)
     - Fetch tables names
     - Fetch columns names of a table
-    - Fetch columns data types 
+    - Fetch columns data types
+    
+- added 10/12/2017
+    - Export database to a JSON file
 
 This file will be updated with new functions when are created.
 PS: sorry for the verbosity of the comments
 
 # Functions / Features to implement
 
-- added 09/12/2017
-    - Export database to a JSON file
+- added 10/12/2017
+    - Import database from a JSON file
 
 Submit your code changes to improve this module!
 shadow-2609
