@@ -7,6 +7,7 @@ Created on Sat Dec 8 09:05:27 2017
 """
 
 import sqlite3
+import json
 
 #NOTE: I come from C++ so if I say array I mean a list and a throw as an error
 #raise, sorry if I say it wrong
@@ -370,13 +371,25 @@ def fetchTablesNames(source):
     #loop for each element in the data array
     for name in data:
         
-        #append just the 1st index of that element
-        #NOTE: WE HAVE TO GET JUST THE FIRST ELEMENT SINCE THE NAME VARIABLE
-        #FROM THE DATA ARRAY IS AN ARRAY ITSELF
-        tabNames.append(name[0])
+        #if the name of the returned table is not sqlite_autoindex_ procede
+        #NOTE: THIS IS RETURNED IF THERE IS AN AUTOINDEXING COLUMN
+        if name[0].find("sqlite_autoindex_") is -1:
+            #append just the 1st index of that element
+            #NOTE: WE HAVE TO GET JUST THE FIRST ELEMENT SINCE THE NAME VARIABLE
+            #FROM THE DATA ARRAY IS AN ARRAY ITSELF
+            tabNames.append(name[0])
     
     #return the array
     return tabNames   
+
+
+#function to get the number of column in a table
+def fetchTableColumnsCount(source,tabName):
+    
+    #to cheat, the program calls the function fetchColumnNames and conunts the
+    #length of the returned array since it would do the same things
+    total = fetchColumnName(source,tabName)
+    return total.__len__()
 
     
 #function to fetch description of a given table
@@ -405,3 +418,157 @@ def fetchInfo(source):
         
     #return the array   
     return tables
+
+#function to fetch all the data from a table
+def fetchData(source,tabName,offset=0,lenght=0):
+    
+    #if source is not a string throw a TypeError
+    if type(source) is not str:
+        raise TypeError("source must be a string!!!")
+        
+    #if tabName is not a string throw a TypeError
+    if type(tabName) is not str:
+        raise TypeError("tabName must be a string!!!")
+    
+    #connect to the database
+    database = sqlite3.connect(source)
+    
+    #create a new variable which will store all the data
+    data = None
+    
+    #fetch everything from the table
+    cursor = database.execute("select * from " + tabName)
+    
+    #if the offset is not 0, apply the specified offset
+    if offset is not 0:
+        cursor.fetchmany(offset)
+        
+    #if lenght is not 0, fetch the indicted amount
+    if lenght is not 0:
+        data = cursor.fetchmany(lenght)
+        
+    else:
+        data = cursor.fetchall()
+    
+    return data
+        
+        
+
+
+#function to convert db to a json file
+def dbToJson(source,dest):
+
+    #if source is not a sting
+    if type(source) is not str:
+        raise TypeError("source must be a string!!!")
+        
+    #if dest is not a sting
+    if type(dest) is not str:
+        raise TypeError("dest must be a string!!!")    
+
+    #create an array to store tables names, column names and column datatype
+    tables = []
+    colName = []
+    colType = []
+    
+    #create an array which contains the string to be converted to a json
+    jsonDef = []
+    
+    #create a temporary json string
+    tempJson = ""
+    
+    #fetch the names of the tables
+    tables = fetchTablesNames(source)
+            
+    #for each table name contained in tables array
+    for name in tables:
+                        
+        #fetch column name for a specific table
+        colName = fetchColumnName(source,name)
+        
+        #fetch column datatype for a specific table
+        colType = fetchDataType(source,name)
+        
+        #start writing the name of the table and the start of a new object
+        tempJson = '"' + name + '": { '
+        
+        #count the column in the table
+        count = fetchTableColumnsCount(source,name)
+        
+        #append the count of the columns
+        tempJson = tempJson + '"column_count":' + str(count) + ',"column_type":{'
+        
+        #for each column add the column number and the datatype
+        for x in range (0,count):
+            tempJson = tempJson + '"' + str(x) + '":"' + colType[x] + '",'
+            
+        #remove the last comma so it can't create any problems (JSON is picky)
+        tempJson = tempJson[:-1] + '},"column_name":{'
+            
+        #for each column daa the column number and the name
+        for x in range (0,count):
+            tempJson = tempJson + '"' + str(x) + '":"' + colName[x] + '",'
+            
+        #remove the last comma
+        tempJson = tempJson[:-1] + '},'
+            
+        #add an array which will contain all the data
+        tempJson = tempJson + '"column_data":['
+        
+        #fetch the data with the function fetchData
+        data = fetchData(source,name)
+                
+        #loop for each data fetched
+        for index in range(0,data.__len__()):
+            
+            tempJson = tempJson + "["
+            
+            #loop for each sub-element in the accessed in this element
+            for subindex in range(0,data[index].__len__()):
+                
+                #append the data in an array
+                tempJson = tempJson + '"' + str(data[index][subindex]) + '",'
+            
+            #delete the last comma and close the array
+            tempJson = tempJson[:-1] + "],"
+    
+        #delete the last comma and close the array
+        tempJson = tempJson[:-1] + "]}"
+            
+        #append the just created json definition to a global array
+        jsonDef.append(tempJson)
+         
+    #delete the last comma and close the object
+    tempJson = tempJson[:-1] + "}"
+    
+    #open a new object which will aggregate the other elements created before
+    actJson = "{"
+    
+    #for each definition created, insert it into a string created above and
+    #add a comma to add the eventual next element
+    for definition in jsonDef:
+        actJson = actJson + definition + ","
+        
+    #remove the last comma and close the last object
+    actJson = actJson[:-1] + "}"
+      
+    #open the file in write mode
+    output = open(dest,"w")
+    
+    #write the string created before
+    output.write(actJson)
+    
+    #close the file
+    output.close()
+    
+    #reopen the file as read mode to check if the written file is correct
+    output = open(dest,"r")
+                            
+    #try to compile the object from the opened file
+    json.load(output)
+    
+    #if everything is correct, close the file and finish the function
+    #NOTE: I DID THIS SINCE IF I USE THE STRING IN THE JSON.LOADS FUNCTIONS,
+    #IT THROWS AN ERROR WHICH I CANNOT FIX, PROBABLY IS A BUG SINCE I CAN 
+    #COMPILE THE FILE BUT I CAN'T COMPILE THE STRING ITSELF
+    output.close()

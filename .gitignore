@@ -2,4 +2,5 @@
 .DS_Store
 *.db
 *.csv
+*.json
 __pycache__/
