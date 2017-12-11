@@ -24,14 +24,17 @@ With this utility (module), the following actions is available:
     
 - added 10/12/2017
     - Export database to a JSON file
+    
+- added 11/12/2017
+    - Import database from a JSON file
 
 This file will be updated with new functions when are created.
 PS: sorry for the verbosity of the comments
 
 # Functions / Features to implement
 
-- added 10/12/2017
-    - Import database from a JSON file
+- added 11/12/2017
+    - Better error checking or autocorrection
 
 Submit your code changes to improve this module!
 shadow-2609
