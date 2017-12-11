@@ -16,6 +16,8 @@ import json
 #and fetch the data, the actual datatype will be displayed as the 2nd value
 #of the tuple returned
 
+
+
 #convert a CSV file to a compatible sqlite DB
 def csvToDb(source,dest):   
     
@@ -271,9 +273,13 @@ def dbToCsv(source,dest,table):
             
     #if table is not a string or a list, throw a TypeError to notify the user    
     else:
+        database.close()
+        ptFile.close()
         raise TypeError("table is not a string nor a list. Provide one of this type of data")
-
-
+    
+    database.close()
+    ptFile.close()
+    
 
 #function to fecth the type of data of a row  by index definiton
 def fetchDataTypeByIndex(source,tabName,index):
@@ -285,6 +291,9 @@ def fetchDataTypeByIndex(source,tabName,index):
     
     #fetch all the data from the cursor
     data = cursor.fetchall()
+    
+    #close the database
+    database.close()
     
     #return just the third element of the indicated index
     #NOTE: THIS RETURN JUST THE THIRD INDEX OF THE SELECTED ELEMENT, WHICH
@@ -313,9 +322,11 @@ def fetchDataType(source,tabName):
         #append just the 3rd index of that element, which rapresent the data type
         rowType.append(name[2])
         
+    #close the database
+    database.close()
+        
     #return the array
     return rowType
-
 
 
 
@@ -329,8 +340,12 @@ def fetchColumnNameByIndex(source,tabName,index):
     #fetch all the data from the cursor
     datas = cursor.fetchall()
     
+    #close the database
+    database.close()
+    
     #return just the third element of the indicated index
     return datas[index][1]
+
 
 
 #function to fetch columns names
@@ -352,8 +367,13 @@ def fetchColumnName(source,tabName):
         #append just the 2nd index of that element, which rapresent the data type
         rowNames.append(name[1])
         
+    #close the database
+    database.close()
+        
     #return the array
     return rowNames
+
+
 
 #function to fetch tables names
 def fetchTablesNames(source):
@@ -378,9 +398,13 @@ def fetchTablesNames(source):
             #NOTE: WE HAVE TO GET JUST THE FIRST ELEMENT SINCE THE NAME VARIABLE
             #FROM THE DATA ARRAY IS AN ARRAY ITSELF
             tabNames.append(name[0])
+            
+    #close the database
+    database.close()
     
     #return the array
     return tabNames   
+
 
 
 #function to get the number of column in a table
@@ -392,6 +416,7 @@ def fetchTableColumnsCount(source,tabName):
     return total.__len__()
 
     
+
 #function to fetch description of a given table
 def fetchInfo(source):
     
@@ -418,6 +443,8 @@ def fetchInfo(source):
         
     #return the array   
     return tables
+
+
 
 #function to fetch all the data from a table
 def fetchData(source,tabName,offset=0,lenght=0):
@@ -449,9 +476,11 @@ def fetchData(source,tabName,offset=0,lenght=0):
         
     else:
         data = cursor.fetchall()
+        
+    #close the database
+    database.close()
     
     return data
-        
         
 
 
@@ -572,3 +601,147 @@ def dbToJson(source,dest):
     #IT THROWS AN ERROR WHICH I CANNOT FIX, PROBABLY IS A BUG SINCE I CAN 
     #COMPILE THE FILE BUT I CAN'T COMPILE THE STRING ITSELF
     output.close()
+    
+
+
+#convert a json file into a database
+#NOTE: THE JSON FILE MUST FOLLOW THE CORRECT SYNTAX OTHERWISE IT WILL NOT
+#WORK
+def jsonToDb(source,dest):
+    
+    #if source is not a sting
+    if type(source) is not str:
+        raise TypeError("source must be a string!!!")
+        
+    #if dest is not a sting
+    if type(dest) is not str:
+        raise TypeError("dest must be a string!!!")  
+        
+    #start by opening the file
+    jsonFile = open(source)
+    
+    #load the json file
+    jsonObj = json.load(jsonFile)
+    
+    #close the file since we don't need it anymore
+    jsonFile.close()
+    
+    #create an array which will contains the tables names
+    tabName = []
+    
+    #loop for each keys in the jsonObj variable
+    for name in jsonObj.keys():
+        tabName.append(name)
+        
+    #create 2 variables, 1 will store the column name, 1 will store the column
+    #type
+    colName = []
+    colType = []
+    
+    #loop for each table name    
+    for name in tabName:
+        
+        #create 2 temporary variable to store the type and the name of the 
+        #column
+        tempType = []
+        tempName = []
+                
+        #loop for each type found in the key column_type
+        for ctype in jsonObj[name]["column_type"]:
+            tempType.append(jsonObj[name]["column_type"][ctype])
+            
+        #append everything fetched from the json object
+        colType.append(tempType)
+            
+        #loop for each name found in the key column_name
+        for cname in jsonObj[name]["column_name"]:
+            tempName.append(jsonObj[name]["column_name"][cname])
+            
+        #append everything fetched from the json object 
+        colName.append(tempName)
+    
+    #error checking: if there is not enough name or if there is something extra
+    #fetch the lenght of the array tabName
+    tempLenName = tabName.__len__()
+    
+    #fetch the lenght of the array colType
+    tempLenColType = colType.__len__()
+
+    #fetch the lenght of the array colName
+    tempLenColName = colName.__len__()
+    
+    #add everything into a variable
+    tempTot = tempLenName+tempLenColName+tempLenColType
+    
+    #if everything is correct, the summed lenght is 3 times more the lenght of an array
+    if tempTot is not (tempLenName*3):
+        raise Exception("Fetched keys does not contains enough data or extra data is present!\n"+"Lenght of Name: " + tempLenName + "\nLenght of column name: " + tempLenColName + "\nLenght of column type: " + tempLenColType)
+     
+    #open or create the desired database
+    database = sqlite3.connect(dest)
+        
+    #loop for each name contained in the array tabName
+    for name in tabName:
+        
+        #fetch the index from the tabName variable with a given name
+        index = tabName.index(name)
+        
+        #create a new variable to store the statement to apply to the database
+        statement = "create table " + name + " ("
+        
+        #loop for each columns names and columns types
+        for x in range (0,colName[index].__len__()):
+            
+            #add the column name and the column types to the statement to pass
+            #to the database
+            statement = statement + colName[index][x] + " " + colType[index][x] + ","
+            
+        #remove the last comma and add a closing parenthesis
+        statement = statement[:-1]+")"
+        
+        #execute the statement and commit the changes
+        database.execute(statement)
+        database.commit()
+         
+        #loop for each array present in the json object for the table
+        for array in jsonObj[name]["column_data"]:
+            
+            #start the statement with the keyword to add some data to a specific
+            #table            
+            statement = "insert into " + name + " values("
+
+            #initiazlize a temporary variable which will allows us to get the
+            #binded datatype for that specific record
+            x = 0
+            
+            #for each data present in the array
+            for data in array:
+                
+                #check if the column type is an int
+                if colType[index][x].find("int") is not -1:
+                    
+                    #if the previous statement is true, it means that the data
+                    #is an integer, hence the program doesn't need to add a
+                    #quoting tag
+                    statement = statement + data + ","
+                
+                #if the program didn't execute the last statement...
+                else:
+                    
+                    #...it does mean that the data type for that specific record
+                    #is a text, so the program needs to add an openind and a closing
+                    #quoting tag
+                    statement = statement + '"' + data + '",'
+                    
+                #increment the temporary variable
+                x = x+1
+                
+            #delete the last comma and close the parenthesis
+            statement = statement[:-1]+")"
+            
+            #execute the statement and commit the changes
+            database.execute(statement)
+            database.commit()  
+                  
+    #close the database
+    database.close()
